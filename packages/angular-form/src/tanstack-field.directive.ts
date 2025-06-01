@@ -1,8 +1,11 @@
 import {
+  DestroyRef,
   Directive,
+  OnInit,
   booleanAttribute,
   computed,
   effect,
+  inject,
   input,
   numberAttribute,
   untracked,
@@ -55,7 +58,8 @@ export class TanStackField<
   TFormOnSubmitAsync extends undefined | FormAsyncValidateOrFn<TParentData>,
   TFormOnServer extends undefined | FormAsyncValidateOrFn<TParentData>,
   TSubmitMeta,
-> {
+> implements OnInit
+{
   name = input.required<TName>()
   defaultValue = input<NoInfer<TData>>()
   asyncDebounceMs = input(undefined as never as number, {
@@ -183,25 +187,17 @@ export class TanStackField<
       >,
   )
 
+  destroyRef = inject(DestroyRef)
+
   constructor() {
     effect(() => {
-      this.api = new FieldApi(untracked(this.options))
-    })
-
-    effect((onCleanup) => {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      if (!this.api) return
-      const unmount = this.api.mount()
-
-      onCleanup(() => {
-        unmount()
-      })
-    })
-
-    effect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      if (!this.api) return
       this.api.update(this.options())
     })
+  }
+
+  ngOnInit() {
+    this.api = new FieldApi(untracked(this.options))
+    const unmount = this.api.mount()
+    this.destroyRef.onDestroy(unmount)
   }
 }
